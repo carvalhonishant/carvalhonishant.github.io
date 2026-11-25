@@ -1,0 +1,714 @@
+<title>Nishant Carvalho</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Nishant Carvalho: ten blue-team security labs. SIEM detections, cloud and Active Directory attacks, hardening.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Layout: a SOC console at night. Hero = name beside a live auth.log tail that fires a real detection; then an ATT&CK coverage grid; then ten labs as an incident ledger with the detection code inside. */
+:root {
+  --bg: #0e1319;
+  --panel: #141b23;
+  --panel-2: #1a232d;
+  --line: #253140;
+  --fg: #dde4ec;
+  --muted: #8494a6;
+  --amber: #ffb547;   /* alert / severity high */
+  --teal: #5fd1b5;    /* pass / benign */
+  --red: #ff6b5a;     /* critical */
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", ui-sans-serif, system-ui, sans-serif;
+  --body: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 48px 48px; background-position: -1px -1px;
+  background-attachment: fixed;
+  color: var(--fg); font: 400 16px/1.6 var(--body);
+  -webkit-font-smoothing: antialiased;
+}
+body::after { content: ""; position: fixed; inset: 0; background: radial-gradient(ellipse at 50% 0%, transparent 0%, var(--bg) 70%); pointer-events: none; z-index: -1; }
+body > * { position: relative; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
+.wrap {
+  max-width: 1180px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.mono { font-family: var(--mono); font-size: .75rem; letter-spacing: .02em; }
+.label { font-family: var(--mono); font-size: .72rem; text-transform: uppercase; letter-spacing: .12em; color: var(--amber); }
+
+/* ---------- bar ---------- */
+.bar { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding-block: 20px; flex-wrap: wrap; }
+.bar .who { display: flex; align-items: center; gap: 10px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 0 4px color-mix(in srgb, var(--teal) 20%, transparent); animation: blink 2.4s ease-in-out infinite; }
+.bar nav { display: flex; gap: 22px; flex-wrap: wrap; }
+.bar nav a { text-decoration: none; color: var(--muted); }
+.bar nav a:hover { color: var(--fg); }
+
+/* ---------- hero ---------- */
+/* fly-through: a tall header whose stage sticks while you scroll; the camera pushes through the portrait into the SOC */
+.fly { position: relative; }
+html.flying .fly { height: 320vh; height: 320svh; }
+.stage { position: relative; overflow: hidden; }
+html.flying .stage { position: sticky; top: 0; height: 100vh; height: 100svh; }
+.stage .bar { position: relative; z-index: 6; }
+.scene { display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); gap: clamp(28px, 5vw, 64px); align-items: center; padding-block: 24px 56px; }
+html.flying .scene { position: absolute; left: 0; right: 0; top: 64px; bottom: 0; margin: 0 auto; padding-block: 0 24px; }
+.intro { position: relative; z-index: 2; will-change: transform, opacity; }
+.about-line { font-size: 1.12rem; max-width: 40ch; margin: 0 0 22px; text-wrap: pretty; }
+.portrait { position: relative; z-index: 3; margin: 0; width: min(100%, 360px); aspect-ratio: 4 / 5; justify-self: center; will-change: transform, opacity; animation: rise 1.2s cubic-bezier(.2,.7,.1,1) .2s backwards; }
+.ph { position: absolute; inset: 0; overflow: hidden; background: var(--panel); border: 1px solid var(--line); }
+.ph img { display: block; width: 100%; height: 100%; object-fit: cover; filter: grayscale(.8) contrast(1.06) brightness(.95); }
+.ph::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(to bottom, transparent 0 3px, rgb(0 0 0 / .16) 3px 4px), linear-gradient(to top, color-mix(in srgb, var(--bg) 70%, transparent), transparent 45%); pointer-events: none; }
+.gram { position: absolute; inset: 0; display: none; place-items: center; font: 700 clamp(5rem, 11vw, 9rem)/1 var(--display); color: transparent; -webkit-text-stroke: 1.5px var(--muted); letter-spacing: -.03em; }
+.nophoto .gram { display: grid; }
+.nophoto img { display: none; }
+.sweep { position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--teal); box-shadow: 0 0 16px 2px color-mix(in srgb, var(--teal) 60%, transparent); animation: scanline 3.6s cubic-bezier(.45,0,.55,1) infinite; z-index: 1; }
+.corner { position: absolute; width: 22px; height: 22px; border: 2px solid var(--amber); }
+.corner.tl { top: -9px; left: -9px; border-right: 0; border-bottom: 0; }
+.corner.tr { top: -9px; right: -9px; border-left: 0; border-bottom: 0; }
+.corner.bl { bottom: -9px; left: -9px; border-right: 0; border-top: 0; }
+.corner.br { bottom: -9px; right: -9px; border-left: 0; border-top: 0; }
+.ptag { position: absolute; left: 0; bottom: calc(100% + 14px); white-space: nowrap; color: var(--muted); }
+.ptag b { color: var(--fg); font-weight: 500; }
+.pmatch { position: absolute; left: 12px; bottom: 12px; z-index: 2; background: var(--amber); color: var(--bg); padding: 2px 8px; font-weight: 600; letter-spacing: .06em; }
+.chips { position: absolute; inset: 0; z-index: 1; pointer-events: none; display: none; }
+html.flying .chips { display: block; }
+.chips span { position: absolute; white-space: nowrap; padding: 3px 8px; border: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 85%, transparent); color: var(--muted); will-change: transform, opacity; animation: appear .9s ease backwards; }
+.chips span.a { color: var(--amber); border-color: color-mix(in srgb, var(--amber) 40%, var(--line)); }
+.veil { position: absolute; inset: 0; z-index: 4; background: var(--bg); opacity: 0; pointer-events: none; }
+.reveal { position: relative; z-index: 5; padding-block: 40px 24px; }
+html.flying .reveal { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; padding-block: 24px; opacity: 0; pointer-events: none; }
+.reveal .term { animation: none; width: min(860px, 100%); margin: 0 auto; }
+.reveal-head { width: min(860px, 100%); margin: 0 auto 18px; display: flex; justify-content: space-between; align-items: end; gap: 12px; flex-wrap: wrap; }
+.reveal-head h2 { font-size: clamp(1.7rem, 3.4vw, 2.6rem); }
+.cue { animation: appear 1s ease 1.2s backwards; }
+@keyframes scanline { 0% { top: 0; opacity: 0; } 10%, 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(3.2rem, 8.4vw, 7rem); line-height: .9; letter-spacing: -.02em; margin: 16px 0 24px; text-transform: uppercase; text-wrap: balance; }
+h1 span { display: block; animation: rise 1.1s cubic-bezier(.2,.7,.1,1) both; }
+h1 span + span { color: transparent; -webkit-text-stroke: 1.5px var(--fg); animation-delay: .1s; }
+.lede { font-size: 1.12rem; max-width: 36ch; margin: 0 0 24px; text-wrap: pretty; }
+.lede mark { background: none; color: var(--amber); font-family: var(--mono); font-size: .92em; }
+.facts { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.facts li { border: 1px solid var(--line); background: var(--panel); padding: 4px 10px; color: var(--muted); }
+.facts b { color: var(--fg); font-weight: 500; }
+
+/* terminal */
+.term { background: var(--panel); border: 1px solid var(--line); box-shadow: 0 40px 80px -40px #000; min-width: 0; animation: rise 1.1s cubic-bezier(.2,.7,.1,1) .15s both; }
+.term-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--line); color: var(--muted); flex-wrap: wrap; }
+.lights { display: flex; gap: 6px; }
+.lights i { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-bottom: 1px solid var(--line); }
+.stats div { padding: 10px 14px; border-right: 1px solid var(--line); min-width: 0; }
+.stats div:last-child { border-right: 0; }
+.stats small { display: block; color: var(--muted); font: 400 .62rem/1.4 var(--mono); text-transform: uppercase; letter-spacing: .1em; }
+.stats b { font: 600 1.25rem/1.3 var(--mono); font-variant-numeric: tabular-nums; }
+#st-fail { color: var(--amber); }
+.log { height: 19.5rem; overflow: hidden; padding: 12px 14px; font: 400 .72rem/1.62 var(--mono); color: var(--muted); display: flex; flex-direction: column; justify-content: flex-end; }
+.log div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.log .f { color: color-mix(in srgb, var(--amber) 70%, var(--muted)); }
+.log .ok { color: var(--teal); }
+.log .hit { color: var(--bg); background: var(--amber); font-weight: 600; }
+.log .ts { opacity: .6; }
+.alert { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; align-items: center; padding: 12px 14px; border-top: 1px solid var(--line); font: 400 .72rem/1.5 var(--mono); transition: background .3s; }
+.alert .sev { padding: 2px 8px; border: 1px solid var(--line); color: var(--muted); font-weight: 600; letter-spacing: .08em; }
+.alert.fired { background: color-mix(in srgb, var(--amber) 14%, var(--panel)); }
+.alert.fired .sev { background: var(--amber); border-color: var(--amber); color: var(--bg); animation: blink .9s steps(2) 4; }
+.alert code { color: var(--muted); grid-column: 2; }
+
+/* ---------- sections ---------- */
+section { padding-block: clamp(48px, 8vw, 96px); }
+.sec-head { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(28px, 5vw, 64px); align-items: end; margin-bottom: 36px; }
+h2 { font-family: var(--display); font-weight: 600; font-size: clamp(2rem, 4.2vw, 3.2rem); line-height: 1; margin: 10px 0 0; letter-spacing: -.01em; text-wrap: balance; }
+.sec-head p { margin: 0; color: var(--muted); max-width: 56ch; }
+
+/* labs: one horizontal track. Pinned (laptop): page scroll drives it sideways. Swipe (phone): native scroll-snap. */
+.pin { position: relative; }
+.sticky { padding-block: clamp(40px, 7vw, 80px); }
+html.pinned .sticky { position: sticky; top: 0; height: 100vh; height: 100dvh; display: flex; flex-direction: column; justify-content: center; overflow: hidden; padding-block: 24px; }
+.labs-head { display: flex; justify-content: space-between; align-items: end; gap: 16px 24px; flex-wrap: wrap; margin-bottom: 22px; }
+.labs-head h2 { margin-top: 8px; }
+.ctrl { display: flex; align-items: center; gap: 12px; }
+.hint { color: var(--muted); }
+.count { font: 600 .95rem/1 var(--mono); font-variant-numeric: tabular-nums; color: var(--muted); min-width: 4.2rem; text-align: center; }
+.count b { color: var(--amber); font-weight: 600; }
+.ctrl button { width: 42px; height: 42px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); font: 500 1rem/1 var(--mono); cursor: pointer; transition: border-color .2s, color .2s; }
+.ctrl button:hover:not(:disabled) { border-color: var(--amber); color: var(--amber); }
+.ctrl button:disabled { opacity: .35; cursor: default; }
+.progress { height: 2px; background: var(--line); margin-top: 18px; }
+.progress i { display: block; height: 100%; background: var(--amber); transform-origin: 0 50%; transform: scaleX(var(--p, 0)); }
+.track {
+  --edge: max(16px, env(safe-area-inset-left, 0px), calc((100% - 1180px) / 2 + 16px));
+  display: flex; gap: 20px; list-style: none; margin: 0; padding: 6px var(--edge) 10px;
+  overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: var(--edge);
+  overscroll-behavior-x: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+}
+.track::-webkit-scrollbar { display: none; }
+html.pinned .track { overflow: visible; scroll-snap-type: none; will-change: transform; }
+.card {
+  --f: 1;
+  flex: 0 0 min(540px, 82vw); min-width: 0; scroll-snap-align: start;
+  display: flex; flex-direction: column; gap: 14px; padding: 22px;
+  background: var(--panel); border: 1px solid var(--line);
+  opacity: calc(.4 + .6 * var(--f)); transform: scale(calc(.95 + .05 * var(--f)));
+  transition: border-color .3s ease;
+}
+.card.on { border-color: color-mix(in srgb, var(--amber) 55%, var(--line)); }
+.card-top { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); flex-wrap: wrap; }
+.card-top .id { color: var(--amber); font-weight: 600; }
+.card .big { font-family: var(--display); font-weight: 700; font-size: clamp(1.8rem, 3.4vw, 2.5rem); line-height: 1; letter-spacing: -.01em; margin: 0; text-wrap: balance; }
+.card .big small { display: block; font: 400 .72rem/1.4 var(--mono); color: var(--teal); letter-spacing: .02em; margin-top: 8px; }
+.card h3 { font-family: var(--display); font-weight: 600; font-size: 1.2rem; line-height: 1.2; margin: 4px 0 0; }
+.card p { margin: 0; color: var(--muted); font-size: .95rem; text-wrap: pretty; }
+.tools { display: flex; flex-wrap: wrap; gap: 6px; }
+.tools span { border: 1px solid var(--line); padding: 1px 7px; color: var(--muted); }
+.code { border: 1px solid var(--line); background: var(--bg); min-width: 0; margin-top: auto; }
+.code header { padding: 7px 12px; border-bottom: 1px solid var(--line); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.code pre { margin: 0; padding: 12px; overflow: auto; max-height: clamp(7rem, 24vh, 13rem); font: 400 .7rem/1.6 var(--mono); color: var(--fg); }
+.code .c { color: var(--muted); }
+.code .k { color: var(--amber); }
+.go { color: var(--amber); text-decoration: none; align-self: flex-start; }
+.go:hover { text-decoration: underline; }
+.card.end { justify-content: center; align-items: flex-start; background: none; border-style: dashed; flex-basis: min(380px, 84vw); }
+.card.end .big { font-size: clamp(1.6rem, 3vw, 2.2rem); }
+.cue { display: inline-flex; gap: 8px; margin-top: 28px; color: var(--muted); text-decoration: none; }
+.cue:hover { color: var(--amber); }
+.cue span { display: inline-block; animation: bob 1.6s ease-in-out infinite; }
+@keyframes bob { 50% { transform: translateY(4px); } }
+
+/* about */
+.about { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(28px, 5vw, 64px); }
+.about p { margin: 0 0 16px; max-width: 60ch; }
+.ledger { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0; margin: 20px 0 0; border: 1px solid var(--line); background: var(--panel); }
+.ledger dt, .ledger dd { margin: 0; padding: 9px 14px; border-bottom: 1px solid var(--line); }
+.ledger dt { color: var(--amber); border-right: 1px solid var(--line); }
+.ledger dt:last-of-type, .ledger dd:last-of-type { border-bottom: 0; }
+.cta { display: inline-flex; gap: 10px; align-items: center; margin-top: 20px; padding: 12px 18px; background: var(--amber); color: var(--bg); text-decoration: none; font-weight: 600; }
+.cta:hover { background: var(--fg); }
+/* contact */
+.contact { border-top: 1px solid var(--line); }
+.contact h2 { font-size: clamp(2.6rem, 7vw, 5.4rem); line-height: .95; text-transform: uppercase; letter-spacing: -.02em; font-weight: 700; margin-bottom: 18px; }
+.contact h2 span { color: transparent; -webkit-text-stroke: 1.5px var(--fg); }
+.contact .sub { color: var(--muted); max-width: 52ch; margin: 0 0 32px; }
+.ways { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+.way { background: var(--panel); padding: 20px; display: flex; flex-direction: column; gap: 10px; min-width: 0; text-decoration: none; transition: background .2s; }
+a.way:hover { background: var(--panel-2); }
+a.way:hover .way-v { color: var(--amber); }
+.way-k { font: 500 .68rem/1 var(--mono); text-transform: uppercase; letter-spacing: .12em; color: var(--amber); }
+.way-v { font: 500 1rem/1.4 var(--mono); color: var(--fg); overflow-wrap: anywhere; user-select: all; }
+.way-acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; }
+.way-acts a, .way-acts button { font: 500 .72rem/1 var(--mono); padding: 8px 12px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); text-decoration: none; cursor: pointer; }
+.way-acts a:hover, .way-acts button:hover { border-color: var(--amber); color: var(--amber); }
+.way-acts .done { border-color: var(--teal); color: var(--teal); }
+@media (max-width: 760px) { .ways { grid-template-columns: minmax(0, 1fr); } }
+footer { border-top: 1px solid var(--line); padding-block: 26px 40px; color: var(--muted); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+@keyframes blink { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01s !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .01s !important; }
+}
+@media (max-width: 860px) {
+  .scene, .sec-head, .about { grid-template-columns: minmax(0, 1fr); gap: 22px; }
+  html.flying .scene { align-content: center; }
+  .portrait { width: min(46vw, 220px); justify-self: start; order: -1; margin-top: 30px; }
+  .about-line { font-size: 1rem; }
+  .chips span:not(.edge) { display: none; }
+  .log { height: 16rem; }
+}
+@media (max-width: 560px) {
+  .stats b { font-size: 1rem; }
+}
+</style>
+
+<header class="fly" id="fly">
+  <div class="stage" id="stage">
+    <div class="wrap">
+      <div class="bar mono">
+        <span class="who"><span class="dot" aria-hidden="true"></span>N. CARVALHO · MELBOURNE, AU</span>
+        <nav aria-label="Sections">
+          <a href="#labs">Labs</a>
+          <a href="#about">Background</a>
+          <a href="#contact">Contact</a>
+          <a href="https://github.com/carvalhonishant" target="_blank" rel="noopener">GitHub ↗</a>
+        </nav>
+      </div>
+    </div>
+
+    <div class="chips mono" id="chips" aria-hidden="true"></div>
+
+    <div class="wrap scene">
+      <div class="intro" id="intro">
+        <div class="label">IT support → security operations</div>
+        <h1><span>Nishant</span><span>Carvalho</span></h1>
+        <p class="about-line">I'm an IT support engineer in Melbourne moving into security operations. I build blue-team labs: harden the host, collect the logs, and write the detection that catches the attacker.</p>
+        <ul class="facts mono">
+          <li><b>Master of Cybersecurity</b> · Swinburne</li>
+          <li>Splunk SODA · Qualys VMDR</li>
+        </ul>
+        <a class="cue mono" href="#labs">Scroll to go in <span aria-hidden="true">↓</span></a>
+      </div>
+      <figure class="portrait" id="portrait">
+        <span class="ptag mono">SUBJECT · <b>N. CARVALHO</b></span>
+        <div class="ph">
+          <img id="me" src="assets/me.jpg" alt="Nishant Carvalho" width="720" height="900">
+          <span class="gram" aria-hidden="true">NC</span>
+          <span class="sweep" aria-hidden="true"></span>
+          <span class="pmatch mono">BLUE TEAM · VERIFIED</span>
+        </div>
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      </figure>
+    </div>
+
+    <div class="veil" id="veil"></div>
+
+    <div class="reveal" id="reveal">
+      <div class="wrap">
+        <div class="reveal-head">
+          <div>
+            <div class="label">Live replay · labs 03 + 04</div>
+            <h2>Watch a detection fire</h2>
+          </div>
+          <span class="mono" style="color:var(--muted)">120 failed logins, then one gets in</span>
+        </div>
+        <div class="term" aria-label="Simulated SSH auth log with a brute force detection, replayed from labs 03 and 04">
+          <div class="term-top mono">
+            <span class="lights" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span>nishant@soc:~$ tail -f /var/log/auth.log</span>
+          </div>
+          <div class="stats">
+            <div><small>failed · 203.0.113.45</small><b id="st-fail">0</b></div>
+            <div><small>accounts tried</small><b id="st-users">0</b></div>
+            <div><small>successful logins</small><b id="st-ok">0</b></div>
+          </div>
+          <div class="log" id="log" aria-hidden="true"></div>
+          <div class="alert" id="alert">
+            <span class="sev" id="sev">WATCHING</span>
+            <span id="alert-text">rule: ssh_bruteforce_success · T1110</span>
+            <code>| where failures &gt; 20 AND successes &gt; 0</code>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section id="labs" aria-label="Labs">
+  <div class="pin" id="pin">
+    <div class="sticky">
+      <div class="wrap">
+        <div class="labs-head">
+          <div>
+            <div class="label">Labs · 01–10</div>
+            <h2>Ten labs, in the order I built them</h2>
+          </div>
+          <div class="ctrl">
+            <span class="hint mono" id="hint">Swipe →</span>
+            <button type="button" id="prev" aria-label="Previous lab">←</button>
+            <span class="count" id="count" aria-live="polite"><b>01</b> / 10</span>
+            <button type="button" id="next" aria-label="Next lab">→</button>
+          </div>
+        </div>
+      </div>
+      <ol class="track" id="track"></ol>
+      <div class="wrap"><div class="progress" aria-hidden="true"><i id="bar"></i></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="about">
+  <div class="wrap about">
+    <div>
+      <div class="label">Background</div>
+      <h2>From the help desk to the SOC</h2>
+    </div>
+    <div>
+      <p>My day job is endpoints, identity, networks and the people who use them, which is most of what a SOC analyst ends up looking at.</p>
+      <p>These labs run on my own MacBook and a free-tier AWS account. Where a tool didn't work the way the docs said, the write-up says so and shows the fix.</p>
+      <dl class="ledger mono">
+        <dt>Study</dt><dd>Master of Cybersecurity, Swinburne</dd>
+        <dt>Certs</dt><dd>Splunk SODA · Qualys VMDR · AWS Cloud Practitioner (in progress)</dd>
+        <dt>SIEM</dt><dd>Splunk (SPL) · Elastic (ES|QL) · Sigma</dd>
+        <dt>Cloud</dt><dd>AWS IAM · CloudTrail · Prowler</dd>
+        <dt>Network</dt><dd>Suricata · pcap analysis</dd>
+        <dt>Code</dt><dd>Python · Bash</dd>
+      </dl>
+      <a class="cta mono" href="#contact">Get in touch ↓</a>
+    </div>
+  </div>
+</section>
+
+<section id="contact" class="contact">
+  <div class="wrap">
+    <div class="label">Contact</div>
+    <h2>Get in <span>touch</span></h2>
+    <p class="sub">Happy to talk security operations, detections, the labs, or anything IT.</p>
+    <div class="ways">
+      <div class="way">
+        <span class="way-k">Email</span>
+        <span class="way-v" id="email"></span>
+        <div class="way-acts">
+          <button type="button" id="copy-email">Copy</button>
+          <a id="mail-email" href="#contact">Open mail app</a>
+        </div>
+      </div>
+      <a class="way" href="https://www.linkedin.com/in/nishant-carvalho" target="_blank" rel="noopener">
+        <span class="way-k">LinkedIn</span>
+        <span class="way-v">linkedin.com/in/nishant-carvalho ↗</span>
+      </a>
+      <a class="way" href="https://github.com/carvalhonishant" target="_blank" rel="noopener">
+        <span class="way-k">GitHub</span>
+        <span class="way-v">github.com/carvalhonishant ↗</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<div class="wrap">
+  <footer class="mono">
+    <span>© 2026 Nishant Carvalho</span>
+    <span>IPs are from documentation ranges (RFC 5737)</span>
+  </footer>
+</div>
+
+<script>
+(() => {
+  const USER = "carvalhonishant";
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+  /* light highlighting: comments muted, a few keywords amber */
+  const hl = (s) => esc(s)
+    .replace(/^(\s*#.*)$/gm, '<span class="c">$1</span>')
+    .replace(/\b(index|rex|stats|where|search|table|FROM|WHERE|GROK|EVAL|STATS|SORT|alert|detection|correlation|condition|MaxAuthTries|PermitRootLogin)\b/g, '<span class="k">$1</span>')
+    .replace(/(\[(?:HIGH|CRITICAL)\])/g, '<span class="k">$1</span>');
+
+  const LABS = [
+    { repo: "lab-01-linux-hardening-cis", title: "Linux server hardening (CIS)",
+      text: "Baselined a fresh Ubuntu server with Lynis, hardened it in two rounds, added auditd and AIDE, and wrote a Bash script that checks 14 CIS-style controls.",
+      metric: "Lynis 61 → 75", note: "14 / 14 controls pass", tools: ["Ubuntu", "Lynis", "auditd", "AIDE", "Bash"],
+      file: "/etc/ssh/sshd_config.d/99-hardening.conf",
+      code: "MaxAuthTries 3\nMaxSessions 2\nLogLevel VERBOSE\nAllowTcpForwarding no\nX11Forwarding no\nPermitRootLogin no\n\n# /etc/audit/rules.d/hardening.rules (extract)\n-w /etc/passwd -p wa -k identity\n-w /etc/shadow -p wa -k identity\n-w /etc/sudoers -p wa -k sudoers" },
+    { repo: "lab-02-macos-hardening-logging", title: "macOS hardening and log analysis",
+      text: "Hardened a real, MDM-managed MacBook and proved every change in the unified log with my own triage script.",
+      metric: "firewall off → on", note: "logged to the second", tools: ["FileVault", "unified log", "Bash"],
+      file: "hardening + proof",
+      code: "# turn on the application firewall and stealth mode\nsudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on\nsudo /usr/libexec/ApplicationFirewall/socketfilterfw --setstealthmode on\n\n# then find the change in the unified log\nlog show --predicate 'process == \"sudo\"' --last 30m" },
+    { repo: "lab-03-splunk-siem", title: "SSH brute force in Splunk",
+      text: "Ingest, hunt in SPL, schedule the alert, build the dashboard. The detection catches a brute force that ends in a successful login.",
+      metric: "120 tries · 10 accounts", note: "1 breach caught", tools: ["Splunk", "SPL", "Docker"],
+      file: "correlation search · SPL",
+      code: "index=linux_lab sourcetype=linux_secure\n| rex \"from (?<src_ip>\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})\"\n| rex \"for (?:invalid user )?(?<user>\\S+) from\"\n| stats count(eval(match(_raw,\"Failed password\"))) as failures\n        count(eval(match(_raw,\"Accepted password\"))) as successes\n        values(user) as users_tried\n        by src_ip\n| where failures > 20 AND successes > 0" },
+    { repo: "lab-04-python-log-parser", title: "Python SSH log parser",
+      text: "The same detection rebuilt in code, with a threat-intel check on top. JSON output and exit codes so it fits in automation.",
+      metric: "3 finding types", note: "behaviour + IOC match", tools: ["Python", "threat intel"],
+      file: "python3 parse_auth.py data/auth.log --iocs iocs.txt",
+      code: "[HIGH] brute_force_success  203.0.113.45\n    120 failed then 1 successful login(s). Likely compromise.\n    accounts touched: admin, ftpuser, git, jenkins, mysql, oracle, postgres, root, test, ubuntu\n[HIGH] known_bad_ip  203.0.113.45\n    Source IP is on the known bad IP list (threat intel match)." },
+    { repo: "lab-05-aws-iam-misconfig", title: "AWS IAM misconfiguration",
+      text: "Built deliberate IAM mistakes in a real account, caught them with Prowler, fixed them and rescanned to prove it.",
+      metric: "8 → 3 critical/high", note: "all 6 of mine fixed", tools: ["AWS IAM", "Prowler", "CloudShell"],
+      file: "scan, then remediate",
+      code: "prowler aws --services iam --severity critical high --status FAIL\n\n# strip admin off the over-privileged user\naws iam detach-user-policy --user-name lab-vulnerable-user \\\n  --policy-arn arn:aws:iam::aws:policy/AdministratorAccess\n\n# remove the privilege escalation policy\naws iam delete-user-policy --user-name lab-privesc-user --policy-name limited-looking-policy" },
+    { repo: "lab-06-aws-cloudtrail-detection", title: "IAM attacks in CloudTrail",
+      text: "Rebuilt the attack chain from the last lab out of CloudTrail and wrote a Python tool that flags it by severity.",
+      metric: "4-step chain rebuilt", note: "IAM logs live in us-east-1", tools: ["CloudTrail", "boto3", "Python"],
+      file: "detector output",
+      code: "[CRITICAL] AdministratorAccess attached to user 'lab-vulnerable-user'  [this user was just created, rapid privilege grant]\n[HIGH] Access key created for user 'lab-vulnerable-user'\n[HIGH] Inline policy 'limited-looking-policy' added to user 'lab-privesc-user'" },
+    { repo: "lab-07-elastic-siem", title: "SSH brute force in Elastic",
+      text: "The Splunk detection rebuilt in the other major SIEM: ES|QL, a scheduled rule that fires a real alert, and a dashboard.",
+      metric: "2nd SIEM, same attack", note: "GROK in place of rex", tools: ["Elastic", "Kibana", "ES|QL"],
+      file: "detection rule · ES|QL",
+      code: "FROM linux-auth\n| GROK message \"from %{IP:src_ip}\"\n| EVAL is_fail = CASE(message LIKE \"*Failed password*\", 1, 0)\n| EVAL is_success = CASE(message LIKE \"*Accepted password*\", 1, 0)\n| STATS failures = SUM(is_fail), successes = SUM(is_success) BY src_ip\n| WHERE failures > 20 AND successes > 0" },
+    { repo: "lab-08-sigma-detection", title: "Detection engineering with Sigma",
+      text: "One vendor-neutral rule, converted automatically into Splunk and Elastic queries, so the logic is kept in one place.",
+      metric: "1 rule → 2 SIEMs", note: "Splunk + Elasticsearch", tools: ["Sigma", "sigma-cli", "YAML"],
+      file: "rules/ssh_bruteforce.yml",
+      code: "title: SSH Brute Force Attempt\ncorrelation:\n    type: event_count\n    rules:\n        - ssh_failed_password\n    group-by:\n        - src_ip\n    timespan: 10m\n    condition:\n        gte: 20\ntags:\n    - attack.credential_access\n    - attack.t1110" },
+    { repo: "lab-09-ad-kerberoasting", title: "Kerberoasting in Active Directory",
+      text: "251 Kerberos ticket requests, 38 of them RC4. The detection filters out the normal RC4 traffic and leaves the one real attack.",
+      metric: "1 of 251", note: "4769 · RC4 0x17 · T1558.003", tools: ["Splunk", "Windows events", "MITRE ATT&CK"],
+      file: "detection · SPL",
+      code: "index=kerberoast\n| rex \"ServiceName'>(?<ServiceName>[^<]+)\"\n| rex \"TicketEncryptionType'>(?<enc>[^<]+)\"\n| rex \"TargetUserName'>(?<TargetUserName>[^<]+)\"\n| search enc=\"0x17\" AND ServiceName!=\"*$\" AND ServiceName!=\"krbtgt\"\n| table _time ServiceName TargetUserName IpAddress enc" },
+    { repo: "lab-10-suricata-ids", title: "Network intrusion detection",
+      text: "Suricata in Docker reads a packet capture offline and catches a port scan and a sqlmap SQL injection with custom rules.",
+      metric: "40-port scan + SQLi", note: "3 custom rules", tools: ["Suricata", "pcap", "Docker"],
+      file: "local.rules",
+      code: "alert http any any -> any any (msg:\"LAB Sqlmap scanner User-Agent\"; flow:established,to_server; http.user_agent; content:\"sqlmap\"; nocase; sid:1000001;)\nalert http any any -> any any (msg:\"LAB SQL Injection attempt in URI\"; flow:established,to_server; http.uri; content:\"'1'='1\"; nocase; sid:1000002;)\nalert tcp any any -> any any (msg:\"LAB TCP SYN port scan\"; flags:S; threshold:type threshold, track by_src, count 20, seconds 60; sid:1000003;)" },
+  ];
+  const pad = (i) => String(i + 1).padStart(2, "0");
+
+  const track = document.getElementById("track");
+  track.innerHTML = LABS.map((l, i) => `
+    <li class="card" data-repo="${l.repo}" aria-label="Lab ${pad(i)} of 10">
+      <div class="card-top mono"><span class="id">LAB ${pad(i)}</span><span class="upd"></span></div>
+      <p class="big">${esc(l.metric)}<small>${esc(l.note)}</small></p>
+      <div>
+        <h3>${esc(l.title)}</h3>
+        <p>${esc(l.text)}</p>
+      </div>
+      <div class="tools mono">${l.tools.map((t) => `<span>${esc(t)}</span>`).join("")}</div>
+      <div class="code"><header class="mono">${esc(l.file)}</header><pre tabindex="0"><code>${hl(l.code)}</code></pre></div>
+      <a class="go mono" href="https://github.com/${USER}/${l.repo}" target="_blank" rel="noopener">Read the write-up ↗</a>
+    </li>`).join("") + `
+    <li class="card end">
+      <span class="label">End of the run</span>
+      <p class="big">More labs on the way.</p>
+      <a class="go mono" href="https://github.com/${USER}" target="_blank" rel="noopener">Follow on GitHub ↗</a>
+    </li>`;
+
+  /* ---------- the carousel ---------- */
+  const pin = document.getElementById("pin");
+  const cards = [...track.children];
+  const labCards = cards.filter((c) => !c.classList.contains("end"));
+  const $count = document.getElementById("count"), $bar = document.getElementById("bar");
+  const $prev = document.getElementById("prev"), $next = document.getElementById("next"), $hint = document.getElementById("hint");
+  const mq = matchMedia("(min-width: 861px) and (min-height: 640px) and (prefers-reduced-motion: no-preference)");
+  const clamp = (v) => Math.max(0, Math.min(1, v));
+  let pinned = false, shift = 0, edge = 0, x = 0, active = 0, raf = 0;
+
+  const measure = () => {
+    edge = parseFloat(getComputedStyle(track).paddingLeft) || 0;
+    const last = cards[cards.length - 1];
+    shift = Math.max(0, last.offsetLeft + last.offsetWidth + edge - track.clientWidth);
+  };
+  const layout = () => {
+    pinned = mq.matches;
+    document.documentElement.classList.toggle("pinned", pinned);
+    $hint.textContent = pinned ? "Scroll ↓" : "Swipe →";
+    track.style.transform = "";
+    pin.style.height = "";
+    measure();
+    if (pinned) pin.style.height = innerHeight + shift + "px";
+    update();
+  };
+  const update = () => {
+    raf = 0;
+    if (pinned) {
+      const run = pin.offsetHeight - innerHeight;
+      x = clamp(-pin.getBoundingClientRect().top / (run || 1)) * shift;
+      track.style.transform = `translateX(${-x}px)`;
+    } else {
+      x = track.scrollLeft;
+    }
+    let best = 0, bestF = -1;
+    cards.forEach((c, i) => {
+      const d = Math.abs(c.offsetLeft - edge - x);
+      const f = clamp(1 - d / (c.offsetWidth * 1.15));
+      c.style.setProperty("--f", f.toFixed(3));
+      if (f > bestF) { bestF = f; best = i; }
+    });
+    /* at the very end, count the last lab as current */
+    if (x >= shift - 2) best = cards.length - 1;
+    active = Math.min(best, labCards.length - 1);
+    cards.forEach((c, i) => c.classList.toggle("on", i === best));
+    $count.innerHTML = `<b>${pad(active)}</b> / ${labCards.length}`;
+    $bar.style.setProperty("--p", shift ? (x / shift).toFixed(4) : 0);
+    $prev.disabled = x <= 2;
+    $next.disabled = x >= shift - 2;
+  };
+  const queue = () => { if (!raf) raf = requestAnimationFrame(update); };
+  const go = (i) => {
+    i = Math.max(0, Math.min(cards.length - 1, i));
+    const target = Math.min(shift, cards[i].offsetLeft - edge);
+    if (pinned) {
+      const top = pin.getBoundingClientRect().top + scrollY;
+      scrollTo({ top: top + (shift ? target / shift : 0) * (pin.offsetHeight - innerHeight), behavior: "smooth" });
+    } else {
+      track.scrollTo({ left: target, behavior: "smooth" });
+    }
+  };
+  const near = () => cards.findIndex((c) => c.classList.contains("on"));
+  $prev.addEventListener("click", () => go(near() - 1));
+  $next.addEventListener("click", () => go(near() + 1));
+  document.getElementById("labs").addEventListener("keydown", (e) => {
+    if (e.target.closest("pre")) return;
+    if (e.key === "ArrowRight") { e.preventDefault(); go(near() + 1); }
+    if (e.key === "ArrowLeft") { e.preventDefault(); go(near() - 1); }
+  });
+  addEventListener("scroll", () => pinned && queue(), { passive: true });
+  track.addEventListener("scroll", () => !pinned && queue(), { passive: true });
+  addEventListener("resize", layout);
+  mq.addEventListener("change", layout);
+  layout();
+  if (document.fonts) document.fonts.ready.then(layout);
+
+  /* ---------- fly-through header ---------- */
+  const root = document.documentElement;
+  const fly = document.getElementById("fly"), stage = document.getElementById("stage");
+  const intro = document.getElementById("intro"), portrait = document.getElementById("portrait");
+  const veil = document.getElementById("veil"), reveal = document.getElementById("reveal");
+  const me = document.getElementById("me");
+  const noPhoto = () => portrait.classList.add("nophoto");
+  me.addEventListener("error", noPhoto);
+  if (me.complete && !me.naturalWidth) noPhoto();
+
+  /* evidence fragments from the labs, scattered at different depths: [text, x%, y%, depth, amber] */
+  const CHIPS = [
+    ["203.0.113.45", 7, 16, 1.6, 1], ["T1110 · brute force", 58, 13, 1.1], ["EventID 4769", 90, 20, 1.8],
+    ["RC4 0x17", 47, 88, 2.2, 1], ["sid:1000003", 3, 84, 1.4], ["| where failures > 20", 70, 93, 1.3],
+    ["Lynis 61 → 75", 93, 58, 2.0], ["us-east-1", 38, 9, 1.9], ["sshd[3484]", 22, 95, 1.0],
+    ["AdministratorAccess", 86, 84, 1.5, 1], ["T1558.003", 26, 6, 1.2], ["socketfilterfw --setstealthmode on", 62, 98, 0.8],
+  ];
+  const chipsEl = document.getElementById("chips");
+  chipsEl.innerHTML = CHIPS.map(([t, x, y, d, a], i) =>
+    `<span class="${a ? "a" : ""}${y <= 16 || y >= 88 ? " edge" : ""}" style="left:${x}%;top:${y}%;animation-delay:${0.5 + i * 0.07}s">${esc(t)}</span>`).join("");
+  const chipEls = [...chipsEl.children];
+
+  const flyMq = matchMedia("(prefers-reduced-motion: no-preference)");
+  const ease = (t) => t * t * (3 - 2 * t);
+  let flying = false, W = 0, H = 0, dx = 0, dy = 0, cover = 1, mx = 0, my = 0, fraf = 0;
+  const flyLayout = () => {
+    flying = flyMq.matches;
+    root.classList.toggle("flying", flying);
+    [intro, portrait, veil, reveal, ...chipEls].forEach((el) => { el.style.transform = ""; el.style.opacity = ""; });
+    if (!flying) { reveal.style.pointerEvents = ""; return; }
+    W = stage.clientWidth; H = stage.clientHeight;
+    const s = stage.getBoundingClientRect(), r = portrait.getBoundingClientRect();
+    dx = W / 2 - (r.left - s.left + r.width / 2);
+    dy = H / 2 - (r.top - s.top + r.height / 2);
+    cover = Math.max(W / r.width, H / r.height) * 1.5;
+    flyFrame();
+  };
+  const flyFrame = () => {
+    fraf = 0;
+    if (!flying) return;
+    const run = fly.offsetHeight - H;
+    const p = clamp(-fly.getBoundingClientRect().top / (run || 1));
+    const zoom = clamp(p / 0.6);
+    /* the intro steps back and fades first */
+    const i = clamp(p / 0.2);
+    intro.style.opacity = 1 - i;
+    intro.style.transform = `translate3d(${mx * -6}px, ${-i * 60 + my * -4}px, 0) scale(${1 - i * 0.08})`;
+    /* the portrait drifts to centre, then the camera pushes through it */
+    const c = ease(clamp(p / 0.3));
+    const s = 1 + (cover - 1) * Math.pow(zoom, 2.6);
+    portrait.style.transform = `translate3d(${dx * c + mx * 8}px, ${dy * c + my * 6}px, 0) scale(${s})`;
+    portrait.style.opacity = 1 - clamp((p - 0.46) / 0.14);
+    /* evidence fragments fly past the camera, the nearer ones faster */
+    chipEls.forEach((el, k) => {
+      const [, x, y, d] = CHIPS[k];
+      const vx = (x - 50) / 50, vy = (y - 50) / 50, z = zoom * d;
+      el.style.transform = `translate3d(${vx * z * W * 0.5 + mx * d * 14}px, ${vy * z * H * 0.5 + my * d * 10}px, 0) scale(${1 + z * 1.6})`;
+      el.style.opacity = 1 - clamp((zoom - 0.15) / 0.5);
+    });
+    veil.style.opacity = clamp((p - 0.44) / 0.16);
+    /* and the SOC comes up out of the dark */
+    const o = ease(clamp((p - 0.58) / 0.2));
+    reveal.style.opacity = o;
+    reveal.style.transform = `translateY(${(1 - o) * 40}px) scale(${0.95 + 0.05 * o})`;
+    reveal.style.pointerEvents = o > 0.9 ? "auto" : "none";
+  };
+  const flyQueue = () => { if (!fraf) fraf = requestAnimationFrame(flyFrame); };
+  addEventListener("scroll", () => { if (flying && scrollY < fly.offsetHeight) flyQueue(); }, { passive: true });
+  addEventListener("resize", flyLayout);
+  flyMq.addEventListener("change", flyLayout);
+  stage.addEventListener("pointermove", (e) => {
+    if (e.pointerType !== "mouse") return;
+    mx = e.clientX / innerWidth - 0.5; my = e.clientY / innerHeight - 0.5; flyQueue();
+  });
+  flyLayout();
+  if (document.fonts) document.fonts.ready.then(flyLayout);
+
+  /* ---------- contact: address assembled here so scrapers reading the raw HTML don't get it ---------- */
+  const addr = ["carvalhonishant7.nc", "gmail.com"].join("@");
+  const $email = document.getElementById("email"), $copy = document.getElementById("copy-email");
+  $email.textContent = addr;
+  document.getElementById("mail-email").href = "mailto:" + addr;
+  $copy.addEventListener("click", () => {
+    const ok = () => { $copy.textContent = "Copied"; $copy.classList.add("done"); setTimeout(() => { $copy.textContent = "Copy"; $copy.classList.remove("done"); }, 1800); };
+    const fallback = () => { const r = document.createRange(); r.selectNodeContents($email); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); $copy.textContent = "Selected, press ⌘C"; };
+    try { navigator.clipboard.writeText(addr).then(ok, fallback); } catch { fallback(); }
+  });
+
+  /* live: last push per repo from GitHub (fails quietly when offline) */
+  const ago = (d) => {
+    const days = Math.round((Date.now() - new Date(d)) / 864e5);
+    return days < 1 ? "today" : days === 1 ? "yesterday" : days < 60 ? `${days} days ago` : `${Math.round(days / 30)} months ago`;
+  };
+  fetch(`https://api.github.com/users/${USER}/repos?per_page=100`)
+    .then((r) => (r.ok ? r.json() : []))
+    .then((repos) => repos.forEach((r) => {
+      const el = document.querySelector(`.card[data-repo="${r.name}"] .upd`);
+      if (el) el.textContent = `last commit ${ago(r.pushed_at)}`;
+    }))
+    .catch(() => {});
+
+  /* ---------- the terminal: replay of the lab 03/04 brute force ---------- */
+  const ATTACKER = "203.0.113.45";
+  const USERS = ["root", "admin", "test", "ubuntu", "oracle", "postgres", "mysql", "git", "jenkins", "ftpuser"];
+  const NOISE = [
+    () => `CRON[${rnd(2000, 9000)}]: pam_unix(cron:session): session opened for user root(uid=0)`,
+    () => `sshd[${rnd(2000, 9000)}]: Accepted publickey for nishant from 10.0.0.12 port ${rnd(50000, 65000)} ssh2`,
+    () => `sudo: nishant : TTY=pts/0 ; PWD=/home/nishant ; USER=root ; COMMAND=/usr/bin/apt update`,
+    () => `systemd-logind[812]: New session ${rnd(10, 99)} of user nishant.`,
+  ];
+  const rnd = (a, b) => a + Math.floor(Math.random() * (b - a));
+  const logEl = document.getElementById("log");
+  const $f = document.getElementById("st-fail"), $u = document.getElementById("st-users"), $o = document.getElementById("st-ok");
+  const alertEl = document.getElementById("alert"), sev = document.getElementById("sev"), atext = document.getElementById("alert-text");
+  const MAX = 15;
+  let fails, tried, ok, sec, timer;
+
+  const stamp = () => {
+    sec += rnd(0, 2);
+    const s = 14 * 3600 + 2 * 60 + sec;
+    const hh = String(Math.floor(s / 3600)).padStart(2, "0"), mm = String(Math.floor(s / 60) % 60).padStart(2, "0"), ss = String(s % 60).padStart(2, "0");
+    return `Nov 25 ${hh}:${mm}:${ss}`;
+  };
+  const push = (msg, cls = "") => {
+    const d = document.createElement("div");
+    if (cls) d.className = cls;
+    d.innerHTML = `<span class="ts">${stamp()} lab01</span> ${esc(msg)}`;
+    logEl.appendChild(d);
+    while (logEl.children.length > MAX) logEl.firstChild.remove();
+  };
+  const failLine = () => {
+    const u = USERS[fails % USERS.length];
+    tried.add(u); fails++;
+    const inv = u === "root" || u === "admin" || u === "ubuntu" ? "" : "invalid user ";
+    push(`sshd[${rnd(2000, 9000)}]: Failed password for ${inv}${u} from ${ATTACKER} port ${rnd(40000, 60000)} ssh2`, "f");
+  };
+  const render = () => { $f.textContent = fails; $u.textContent = tried.size; $o.textContent = ok; };
+  const fire = () => {
+    ok = 1;
+    push(`sshd[${rnd(2000, 9000)}]: Accepted password for admin from ${ATTACKER} port 51122 ssh2`, "hit");
+    render();
+    alertEl.classList.add("fired");
+    sev.textContent = "HIGH";
+    atext.textContent = `brute force with success · ${ATTACKER} · 120 failed → 1 accepted · T1110`;
+  };
+  const reset = () => {
+    fails = 0; tried = new Set(); ok = 0; sec = 0;
+    alertEl.classList.remove("fired"); sev.textContent = "WATCHING";
+    atext.textContent = "rule: ssh_bruteforce_success · T1110";
+  };
+
+  reset();
+  /* fill the window so the first frame is never empty */
+  for (let i = 0; i < 6; i++) push(NOISE[i % NOISE.length](), i % 2 ? "ok" : "");
+  for (let i = 0; i < 9; i++) failLine();
+  render();
+
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    while (fails < 120) failLine();
+    fire();
+    return;
+  }
+  const tick = () => {
+    if (fails >= 120) {
+      fire();
+      timer = setTimeout(() => { reset(); render(); tick(); }, 6500);
+      return;
+    }
+    if (Math.random() < .12) push(NOISE[rnd(0, NOISE.length)](), Math.random() < .5 ? "ok" : "");
+    else failLine();
+    render();
+    timer = setTimeout(tick, fails < 20 ? 160 : 55);
+  };
+  timer = setTimeout(tick, 900);
+})();
+</script>
