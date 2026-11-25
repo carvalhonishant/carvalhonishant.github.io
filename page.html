@@ -397,7 +397,9 @@ footer { border-top: 1px solid var(--line); padding-block: 26px 40px; color: var
         <span class="way-v" id="email"></span>
         <div class="way-acts">
           <button type="button" id="copy-email">Copy</button>
-          <a id="mail-email" href="#contact">Open mail app</a>
+          <a id="gmail-email" href="#contact" target="_blank" rel="noopener">Gmail ↗</a>
+          <a id="outlook-email" href="#contact" target="_blank" rel="noopener">Outlook ↗</a>
+          <a id="mail-email" href="#contact">Mail app</a>
         </div>
       </div>
       <a class="way" href="https://www.linkedin.com/in/nishant-carvalho" target="_blank" rel="noopener">
@@ -658,6 +660,8 @@ footer { border-top: 1px solid var(--line); padding-block: 26px 40px; color: var
   const $email = document.getElementById("email"), $copy = document.getElementById("copy-email");
   $email.textContent = addr;
   document.getElementById("mail-email").href = "mailto:" + addr;
+  document.getElementById("gmail-email").href = "https://mail.google.com/mail/?view=cm&fs=1&to=" + encodeURIComponent(addr);
+  document.getElementById("outlook-email").href = "https://outlook.office.com/mail/deeplink/compose?to=" + encodeURIComponent(addr);
   $copy.addEventListener("click", () => {
     const ok = () => { $copy.textContent = "Copied"; $copy.classList.add("done"); setTimeout(() => { $copy.textContent = "Copy"; $copy.classList.remove("done"); }, 1800); };
     const fallback = () => { const r = document.createRange(); r.selectNodeContents($email); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); $copy.textContent = "Selected, press ⌘C"; };
