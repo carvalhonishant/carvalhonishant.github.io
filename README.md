@@ -5,5 +5,5 @@ Portfolio site for my blue-team security labs. Live at https://carvalhonishant.g
 Plain HTML, CSS and JavaScript, no build tools or frameworks. Hosted free on GitHub Pages.
 
 - `page.html` is the source. Edit it, then run `./build.sh` to regenerate `index.html`.
-- `assets/me.jpg` is the portrait used in the scroll fly-through. Without it the frame shows an "NC" monogram.
+- The scroll fly-through pushes through an access badge into a live detection replay.
 - The "last commit" dates on each lab card come live from the GitHub API.

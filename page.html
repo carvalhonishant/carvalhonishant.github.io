@@ -59,16 +59,19 @@ html.flying .fly { height: 320vh; height: 320svh; }
 html.flying .stage { position: sticky; top: 0; height: 100vh; height: 100svh; }
 .stage .bar { position: relative; z-index: 6; }
 .scene { display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); gap: clamp(28px, 5vw, 64px); align-items: center; padding-block: 24px 56px; }
-html.flying .scene { position: absolute; left: 0; right: 0; top: 64px; bottom: 0; margin: 0 auto; padding-block: 0 24px; }
+html.flying .scene { position: absolute; left: 0; right: 0; top: var(--bar-h, 64px); bottom: 0; margin: 0 auto; padding-block: 0 24px; }
 .intro { position: relative; z-index: 2; will-change: transform, opacity; }
 .about-line { font-size: 1.12rem; max-width: 40ch; margin: 0 0 22px; text-wrap: pretty; }
 .portrait { position: relative; z-index: 3; margin: 0; width: min(100%, 360px); aspect-ratio: 4 / 5; justify-self: center; will-change: transform, opacity; animation: rise 1.2s cubic-bezier(.2,.7,.1,1) .2s backwards; }
 .ph { position: absolute; inset: 0; overflow: hidden; background: var(--panel); border: 1px solid var(--line); }
-.ph img { display: block; width: 100%; height: 100%; object-fit: cover; filter: grayscale(.8) contrast(1.06) brightness(.95); }
-.ph::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(to bottom, transparent 0 3px, rgb(0 0 0 / .16) 3px 4px), linear-gradient(to top, color-mix(in srgb, var(--bg) 70%, transparent), transparent 45%); pointer-events: none; }
-.gram { position: absolute; inset: 0; display: none; place-items: center; font: 700 clamp(5rem, 11vw, 9rem)/1 var(--display); color: transparent; -webkit-text-stroke: 1.5px var(--muted); letter-spacing: -.03em; }
-.nophoto .gram { display: grid; }
-.nophoto img { display: none; }
+.ph::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(to bottom, transparent 0 3px, rgb(0 0 0 / .14) 3px 4px); pointer-events: none; }
+.badge-in { position: absolute; inset: 0; display: grid; grid-template-rows: auto 1fr auto auto; gap: 12px; padding: 18px; }
+.b-top { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); white-space: nowrap; }
+.b-ok { color: var(--teal); }
+.gram { display: grid; place-items: center; font: 700 clamp(5rem, 10vw, 8rem)/1 var(--display); color: transparent; -webkit-text-stroke: 1.5px var(--muted); letter-spacing: -.03em; }
+.b-name b { display: block; font: 600 1.15rem/1.2 var(--display); }
+.b-name span { color: var(--muted); }
+.barcode { height: 26px; opacity: .55; background: repeating-linear-gradient(90deg, var(--fg) 0 2px, transparent 2px 4px, var(--fg) 4px 5px, transparent 5px 9px, var(--fg) 9px 12px, transparent 12px 14px, var(--fg) 14px 15px, transparent 15px 19px); }
 .sweep { position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--teal); box-shadow: 0 0 16px 2px color-mix(in srgb, var(--teal) 60%, transparent); animation: scanline 3.6s cubic-bezier(.45,0,.55,1) infinite; z-index: 1; }
 .corner { position: absolute; width: 22px; height: 22px; border: 2px solid var(--amber); }
 .corner.tl { top: -9px; left: -9px; border-right: 0; border-bottom: 0; }
@@ -77,7 +80,6 @@ html.flying .scene { position: absolute; left: 0; right: 0; top: 64px; bottom: 0
 .corner.br { bottom: -9px; right: -9px; border-left: 0; border-top: 0; }
 .ptag { position: absolute; left: 0; bottom: calc(100% + 14px); white-space: nowrap; color: var(--muted); }
 .ptag b { color: var(--fg); font-weight: 500; }
-.pmatch { position: absolute; left: 12px; bottom: 12px; z-index: 2; background: var(--amber); color: var(--bg); padding: 2px 8px; font-weight: 600; letter-spacing: .06em; }
 .chips { position: absolute; inset: 0; z-index: 1; pointer-events: none; display: none; }
 html.flying .chips { display: block; }
 .chips span { position: absolute; white-space: nowrap; padding: 3px 8px; border: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 85%, transparent); color: var(--muted); will-change: transform, opacity; animation: appear .9s ease backwards; }
@@ -85,7 +87,8 @@ html.flying .chips { display: block; }
 .veil { position: absolute; inset: 0; z-index: 4; background: var(--bg); opacity: 0; pointer-events: none; }
 .reveal { position: relative; z-index: 5; padding-block: 40px 24px; }
 html.flying .reveal { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; padding-block: 24px; opacity: 0; pointer-events: none; }
-.reveal .term { animation: none; width: min(860px, 100%); margin: 0 auto; }
+.reveal > .wrap { width: 100%; min-width: 0; }
+.reveal .term { animation: none; width: min(860px, 100%); max-width: 100%; margin: 0 auto; }
 .reveal-head { width: min(860px, 100%); margin: 0 auto 18px; display: flex; justify-content: space-between; align-items: end; gap: 12px; flex-wrap: wrap; }
 .reveal-head h2 { font-size: clamp(1.7rem, 3.4vw, 2.6rem); }
 .cue { animation: appear 1s ease 1.2s backwards; }
@@ -217,10 +220,37 @@ footer { border-top: 1px solid var(--line); padding-block: 26px 40px; color: var
 @media (max-width: 860px) {
   .scene, .sec-head, .about { grid-template-columns: minmax(0, 1fr); gap: 22px; }
   html.flying .scene { align-content: center; }
-  .portrait { width: min(46vw, 220px); justify-self: start; order: -1; margin-top: 30px; }
-  .about-line { font-size: 1rem; }
-  .chips span:not(.edge) { display: none; }
+  .bar { padding-block: 16px 8px; gap: 8px 16px; }
+  .bar nav { gap: 18px; }
+  .portrait { width: 100%; max-width: 380px; aspect-ratio: 1.75; justify-self: start; order: -1; margin-top: 26px; }
+  .badge-in { grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto 1fr auto; gap: 8px 16px; padding: 14px 16px; }
+  .b-top, .barcode { grid-column: 1 / -1; }
+  .gram { font-size: 3.4rem; place-items: center start; }
+  .b-name { align-self: center; }
+  .b-name b { font-size: 1.05rem; }
+  .barcode { height: 18px; }
+  .ptag { bottom: calc(100% + 10px); }
+  h1 { font-size: clamp(2.8rem, 13vw, 4rem); margin: 12px 0 16px; }
+  .about-line { font-size: 1rem; margin-bottom: 18px; }
+  .facts { gap: 6px; }
+  .cue { margin-top: 18px; }
+  .chips { display: none !important; }
+  .reveal-head { margin-bottom: 12px; }
+  .reveal-head > .mono { display: none; }
+  .stats div { padding: 8px 10px; }
+  .log { padding: 10px; font-size: .66rem; }
+  .alert { padding: 10px; gap: 4px 10px; }
+  .alert code { grid-column: 1 / -1; }
   .log { height: 16rem; }
+}
+@media (max-width: 860px) and (max-height: 720px) {
+  .portrait { aspect-ratio: 2.1; margin-top: 18px; }
+  .gram { font-size: 2.6rem; }
+  .barcode { display: none; }
+  h1 { font-size: 2.6rem; }
+  .about-line { font-size: .94rem; }
+  .cue { display: none; }
+  .log { height: 12rem; }
 }
 @media (max-width: 560px) {
   .stats b { font-size: 1rem; }
@@ -254,13 +284,16 @@ footer { border-top: 1px solid var(--line); padding-block: 26px 40px; color: var
         </ul>
         <a class="cue mono" href="#labs">Scroll to go in <span aria-hidden="true">↓</span></a>
       </div>
-      <figure class="portrait" id="portrait">
-        <span class="ptag mono">SUBJECT · <b>N. CARVALHO</b></span>
+      <figure class="portrait" id="portrait" aria-label="Access badge: Nishant Carvalho, security operations, Melbourne">
+        <span class="ptag mono">ACCESS · <b>GRANTED</b></span>
         <div class="ph">
-          <img id="me" src="assets/me.jpg" alt="Nishant Carvalho" width="720" height="900">
-          <span class="gram" aria-hidden="true">NC</span>
+          <div class="badge-in">
+            <div class="b-top mono"><span>SOC · BLUE TEAM</span><span class="b-ok">VERIFIED</span></div>
+            <span class="gram" aria-hidden="true">NC</span>
+            <div class="b-name"><b>Nishant Carvalho</b><span class="mono">Security operations · Melbourne</span></div>
+            <div class="barcode" aria-hidden="true"></div>
+          </div>
           <span class="sweep" aria-hidden="true"></span>
-          <span class="pmatch mono">BLUE TEAM · VERIFIED</span>
         </div>
         <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
       </figure>
@@ -541,10 +574,7 @@ footer { border-top: 1px solid var(--line); padding-block: 26px 40px; color: var
   const fly = document.getElementById("fly"), stage = document.getElementById("stage");
   const intro = document.getElementById("intro"), portrait = document.getElementById("portrait");
   const veil = document.getElementById("veil"), reveal = document.getElementById("reveal");
-  const me = document.getElementById("me");
-  const noPhoto = () => portrait.classList.add("nophoto");
-  me.addEventListener("error", noPhoto);
-  if (me.complete && !me.naturalWidth) noPhoto();
+  const bar = stage.querySelector(".bar");
 
   /* evidence fragments from the labs, scattered at different depths: [text, x%, y%, depth, amber] */
   const CHIPS = [
@@ -566,6 +596,7 @@ footer { border-top: 1px solid var(--line); padding-block: 26px 40px; color: var
     root.classList.toggle("flying", flying);
     [intro, portrait, veil, reveal, ...chipEls].forEach((el) => { el.style.transform = ""; el.style.opacity = ""; });
     if (!flying) { reveal.style.pointerEvents = ""; return; }
+    stage.style.setProperty("--bar-h", bar.offsetHeight + "px");
     W = stage.clientWidth; H = stage.clientHeight;
     const s = stage.getBoundingClientRect(), r = portrait.getBoundingClientRect();
     dx = W / 2 - (r.left - s.left + r.width / 2);
